@@ -38,4 +38,8 @@ class Connector(ABC):
 
     @abstractmethod
     def fetch(self) -> Iterator[Document]:
-        """Yield every Document currently in the source."""
+        """Yield every Document currently in the source.
+
+        Must raise on any failure and never stop early: sync deletes the chunks of
+        documents missing from a fetch that completed.
+        """

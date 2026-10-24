@@ -14,7 +14,7 @@ from knowledge_agent.connectors.base import Connector, Document
 
 BASE_URL = "https://erasmus-plus.ec.europa.eu"
 LANDING_PATH = "/programme-guide/erasmusplus-programme-guide"
-# The 3 MVP sections from ADR 001; KA2 is two pages.
+
 SECTION_PATHS = (
     "/programme-guide/part-a/participation",
     "/programme-guide/part-b/key-action-1/higher-education-mobility-projects",
@@ -25,6 +25,8 @@ USER_AGENT = "sourced-rag-pipeline/0.1 (+https://github.com/karimmike/sourced-ra
 
 
 class ErasmusGuideConnector(Connector):
+    """The ADR 001 sections of the Erasmus+ Programme Guide, cached on disk."""
+
     name = "erasmus_guide"
 
     def __init__(
@@ -72,7 +74,6 @@ class ErasmusGuideConnector(Connector):
             )
 
     def _get(self, path: str) -> tuple[str, datetime]:
-        """Return a page's HTML and when it was downloaded, using the cache if possible."""
         cache_file = self.cache_dir / (path.strip("/").replace("/", "__") + ".html")
         if self.refresh or not cache_file.exists():
             self._wait()
@@ -112,6 +113,7 @@ def parse_document_page(html: str) -> tuple[str, str]:
 
 
 def page_title(html: str) -> str:
+    """Return the page's h1 title."""
     h1 = BeautifulSoup(html, "lxml").select_one("h1.eac-page-title")
     if h1 is None:
         raise ValueError("Page title (h1.eac-page-title) not found")

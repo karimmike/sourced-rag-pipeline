@@ -14,6 +14,12 @@ I'm building this project myself, step by step.
 - Keep changes small enough that I can understand every line.
 - Don't commit or push; I do that myself.
 
+## Code style
+- Comments: keep them rare. Only explain why (non-obvious decisions, constraints, contracts),
+  never narrate what the code does. Public classes and functions get a one-line docstring;
+  private helpers usually none. Contracts that other code relies on (like fetch() raising on
+  failure) are always documented.
+
 ## Fixed decisions
 - Python package: src/knowledge_agent/. Agent: Pydantic-AI. Vector store: Qdrant.
 - Every answer has citations to retrieved chunks, or enough_evidence = false.

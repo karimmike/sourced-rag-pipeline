@@ -60,13 +60,14 @@ def test_footnote_is_attached_to_the_section_that_references_it(sections):
     intro, travel = sections
 
     assert "the venue of the activity[17] by using" in travel.text
-    assert travel.text.endswith(
-        "[17] For example, if a person from Madrid (Spain) is taking part in an activity "
+    assert travel.footnotes == {
+        "17": "For example, if a person from Madrid (Spain) is taking part in an activity "
         "in Rome (Italy), the applicant will calculate the distance from Madrid to Rome "
         "(1365,28 KM) and then select the applicable travel distance band "
         "(i.e. between 500 and 1999 km)."
-    )
-    assert "Madrid" not in intro.text
+    }
+    assert "Madrid" not in travel.text
+    assert intro.footnotes == {}
 
 
 def test_slug_and_fragment(sections):

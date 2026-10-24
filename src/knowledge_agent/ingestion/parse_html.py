@@ -17,7 +17,7 @@ SUFFIX_WORDS = 4
 
 
 class Section(BaseModel):
-    """One h2/h3 section of a page, with the footnotes it references."""
+    """One h2/h3 section of a page; footnotes are kept apart so the chunker can place them."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -27,9 +27,12 @@ class Section(BaseModel):
     slug: str
     # Text-fragment link ("#:~:text=...") that scrolls a browser to the heading.
     fragment: str
+    # Footnotes referenced in text, number -> text. Treat as read-only.
+    footnotes: dict[str, str]
 
 
 def parse_html(document: Document) -> list[Section]:
+    """Split a guide page into its h2/h3 sections, in page order."""
     body = BeautifulSoup(document.content, "lxml").select_one(CONTENT_SELECTOR)
     if body is None:
         raise ValueError(f"{document.id}: {CONTENT_SELECTOR} not found")
@@ -60,7 +63,7 @@ def parse_html(document: Document) -> list[Section]:
         if not blocks:
             continue
         # dict.fromkeys drops repeated references but keeps their order.
-        blocks += [footnotes[ref] for ref in dict.fromkeys(refs) if ref in footnotes]
+        notes = dict(footnotes[ref] for ref in dict.fromkeys(refs) if ref in footnotes)
         slug = "/".join(_slugify(h) for h in path) or "intro"
         slugs[slug] += 1
         if slugs[slug] > 1:
@@ -71,25 +74,24 @@ def parse_html(document: Document) -> list[Section]:
                 text="\n\n".join(blocks),
                 slug=slug,
                 fragment=fragment,
+                footnotes=notes,
             )
         )
     return sections
 
 
-def _extract_footnotes(body: Tag) -> dict[str, str]:
-    """Remove the footnote list from the body; return footnote id -> "[n] text"."""
+def _extract_footnotes(body: Tag) -> dict[str, tuple[str, str]]:
     footnotes = {}
     for item in body.select("ol.footnotes li.footnote"):
         for back_link in item.select('a[href^="#footnoteref"]'):
             back_link.decompose()
-        footnotes[item["id"]] = f"[{item['value']}] {_text(item)}"
+        footnotes[item["id"]] = (item["value"], _text(item))
     for tag in body.select("ol.footnotes, #eac-footnote-label"):
         tag.decompose()
     return footnotes
 
 
 def _render(node, refs: list[str]) -> str:
-    """One body child as Markdown text; footnote ids it references go into refs."""
     if isinstance(node, Comment):
         return ""
     if isinstance(node, NavigableString):
@@ -133,7 +135,6 @@ def _fragment(heading: Tag | None, duplicated: set[str]) -> str:
 
 
 def _text(tag: Tag) -> str:
-    """Visible text with a space between block elements and whitespace collapsed."""
     for block in tag.find_all(["p", "li", "div", "br"]):
         block.insert_after(" ")
     return " ".join(tag.get_text().split())
