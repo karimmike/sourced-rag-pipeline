@@ -6,6 +6,8 @@ from typing import Protocol
 from fastembed import TextEmbedding
 from tokenizers import Tokenizer
 
+from knowledge_agent.config import FASTEMBED_CACHE_DIR
+
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 
@@ -17,15 +19,17 @@ class Embedder(Protocol):
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]: ...
 
+    def embed_query(self, text: str) -> list[float]: ...
+
     def count_tokens(self, text: str) -> int: ...
 
 
 class FastEmbedEmbedder:
     """bge-small-en-v1.5 on the CPU through FastEmbed; downloads the model once."""
 
-    def __init__(self, model_name: str = MODEL_NAME):
+    def __init__(self, model_name: str = MODEL_NAME, cache_dir: str = FASTEMBED_CACHE_DIR):
         self.model_name = model_name
-        self._model = TextEmbedding(model_name)
+        self._model = TextEmbedding(model_name, cache_dir=cache_dir)
         self.dimension = self._model.embedding_size
         # FastEmbed's tokenizer truncates at 512, which would hide oversized chunks; we
         # count on an untruncated, unpadded copy so the embedding input stays protected.
@@ -35,6 +39,9 @@ class FastEmbedEmbedder:
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         return [vector.tolist() for vector in self._model.passage_embed(list(texts))]
+
+    def embed_query(self, text: str) -> list[float]:
+        return next(iter(self._model.query_embed(text))).tolist()
 
     def count_tokens(self, text: str) -> int:
         # Includes [CLS] and [SEP], which count toward the model's 512-token limit.

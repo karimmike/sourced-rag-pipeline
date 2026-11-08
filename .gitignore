@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .env
 .pytest_cache/
+.cache/
 qdrant_storage/
 data/public/*
 !data/public/.gitkeep

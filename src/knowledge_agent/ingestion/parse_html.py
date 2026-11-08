@@ -14,6 +14,8 @@ CONTENT_SELECTOR = "div.eac-body"
 # ADR 001: split on h2/h3; h4 stays inside the section as a Markdown heading.
 SPLIT_LEVELS = {"h2": 0, "h3": 1}
 SUFFIX_WORDS = 4
+# Footnote links wrap their marker in whitespace: "Union [4] , even" should read "Union[4], even".
+MARKER_SPACING = re.compile(r"\s*(\[\d+\])(?:\s+(?=[.,;:!?)]))?")
 
 
 class Section(BaseModel):
@@ -96,10 +98,16 @@ def _render(node, refs: list[str]) -> str:
         return ""
     if isinstance(node, NavigableString):
         return " ".join(node.split())
-    for ref in node.select("a.eac-see-footnote"):
+    markers = node.select("a.eac-see-footnote")
+    for ref in markers:
         refs.append(ref["href"].removeprefix("#"))
         ref.sup.replace_with(f"[{ref.sup.get_text(strip=True)}]")
         ref.unwrap()
+    text = _render_tag(node)
+    return MARKER_SPACING.sub(r"\1", text) if markers else text
+
+
+def _render_tag(node: Tag) -> str:
     if node.name == "table":
         return _table_to_markdown(node)
     if node.name in ("ul", "ol"):

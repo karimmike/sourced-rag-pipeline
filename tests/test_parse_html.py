@@ -100,3 +100,18 @@ def test_duplicate_headings_get_distinct_slugs_and_fragments():
         "#:~:text=Who%20can%20apply%3F,-Any%20eligible%20participating%20organisation"
     )
     assert len({s.fragment for s in sections}) == 3
+
+
+def test_footnote_marker_has_no_space_before_it_or_before_punctuation():
+    html = """<div class="eac-body"><h2>Eligibility</h2>
+    <p>Member States of the European Union<a class="eac-see-footnote" href="#footnote4_x">
+      <span class="eac-see-footnote-text"></span><sup>4</sup>
+    </a>
+    , even if in the programme.</p>
+    <ol class="footnotes"><li class="footnote" id="footnote4_x" value="4">Overseas countries.</li></ol>
+    </div>"""
+
+    [section] = parse_html(make_document(html))
+
+    assert "European Union[4], even if" in section.text
+    assert section.footnotes == {"4": "Overseas countries."}

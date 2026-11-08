@@ -96,10 +96,7 @@ class ChunkStore:
 
     def chunks(self, source: str) -> list[Chunk]:
         """All indexed chunks of one source, rebuilt from their payloads."""
-        return [
-            Chunk(id=str(point.id), **_without(point.payload, "document_checksum"))
-            for point in self._scroll(source, with_payload=True)
-        ]
+        return [point_to_chunk(point) for point in self._scroll(source, with_payload=True)]
 
     def _indexed(self, source: str) -> dict[str, tuple[str | None, set[str]]]:
         checksums: dict[str, set[str]] = {}
@@ -167,6 +164,11 @@ class ChunkStore:
                 )
             ),
         )
+
+
+def point_to_chunk(point: models.Record | models.ScoredPoint) -> Chunk:
+    """Rebuild a Chunk from a Qdrant point; the inverse of what sync stores."""
+    return Chunk(id=str(point.id), **_without(point.payload, "document_checksum"))
 
 
 def _source_filter(source: str) -> models.Filter:
