@@ -8,6 +8,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.models import Model
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
+from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.usage import RunUsage, UsageLimits
 
 from knowledge_agent.agent.grounding import CitationError, ground
@@ -24,7 +25,8 @@ You answer questions about the Erasmus+ Programme Guide using only the search_gu
 - For every claim, cite the chunk_id and a quote copied exactly from that chunk's text.
 - If the chunks do not support an answer, set enough_evidence to false, give no citations,
   and say in the answer what information is missing.
-- Answer in the language of the question; quotes stay in the guide's original wording.
+- Write the answer in the same language as the question.
+- Quotes are copied from the guide unchanged, even when the answer is in another language.
 """
 
 UNVERIFIED_ANSWER = "The answer could not be verified against the sources."
@@ -53,10 +55,16 @@ agent = Agent(
 )
 
 
-@agent.tool
+def _searches_left(ctx: RunContext[Deps], tool_def: ToolDefinition) -> ToolDefinition | None:
+    return tool_def if ctx.deps.searches < ctx.deps.max_searches else None
+
+
+# The model ignored a "limit reached" reply and kept searching, so the tool is hidden instead.
+@agent.tool(prepare=_searches_left)
 def search_guide(ctx: RunContext[Deps], query: str) -> list[dict[str, str]] | str:
     """Search the Erasmus+ Programme Guide and return the most relevant chunks."""
     deps = ctx.deps
+    # prepare runs once per request, so parallel calls in one response can still go over the limit.
     if deps.searches >= deps.max_searches:
         return "Search limit reached. Answer from the chunks you already have, or abstain."
     deps.searches += 1

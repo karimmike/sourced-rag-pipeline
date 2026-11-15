@@ -5,20 +5,26 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+# Docstrings and field descriptions of Citation and AgentAnswer are sent to the model.
 class Citation(BaseModel):
-    """A reference from the model's answer to one retrieved chunk."""
+    """One piece of evidence for the answer."""
 
-    # Field descriptions become part of the output schema the model sees.
-    chunk_id: str = Field(description="Id of a chunk returned by the search tool in this run.")
-    quote: str = Field(description="Text copied exactly from the chunk that supports the answer.")
+    chunk_id: str = Field(description="The chunk_id of a chunk returned by search_guide in this conversation.")
+    quote: str = Field(
+        description="One continuous passage copied character for character from that chunk's text. "
+        "Do not paraphrase, translate, shorten inside, or join separate passages."
+    )
 
 
 class AgentAnswer(BaseModel):
-    """What the model returns; checked by grounding.ground() before any caller sees it."""
+    """Your final answer to the question."""
 
-    answer: str
-    citations: list[Citation]
-    enough_evidence: bool
+    answer: str = Field(
+        description="The answer, written in the same language as the question. "
+        "If enough_evidence is false, say what information is missing."
+    )
+    citations: list[Citation] = Field(description="One citation per claim. Empty if enough_evidence is false.")
+    enough_evidence: bool = Field(description="True only if the cited chunks support every claim in the answer.")
 
     @model_validator(mode="after")
     def _citations_match_evidence(self) -> "AgentAnswer":

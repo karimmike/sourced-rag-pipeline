@@ -92,18 +92,39 @@ def test_model_abstention_is_insufficient_evidence(store):
     assert result.answer.abstain_reason == "insufficient_evidence"
 
 
-def test_search_limit_stops_further_searches(store, monkeypatch):
+def test_search_tool_is_hidden_after_limit(store, monkeypatch):
+    monkeypatch.setattr(settings, "max_searches", 1)
+    offered = []
+
+    def recording(step):
+        def wrapped(messages, info):
+            offered.append([tool.name for tool in info.function_tools])
+            return step(messages, info)
+
+        return wrapped
+
+    ask("Q", store, model=scripted(recording(do_search), recording(abstain)))
+
+    assert offered == [["search_guide"], []]
+
+
+def test_parallel_searches_beyond_limit_are_refused(store, monkeypatch):
     monkeypatch.setattr(settings, "max_searches", 1)
     seen = []
 
+    def two_searches(messages, info):
+        call = ToolCallPart("search_guide", {"query": "student grant"})
+        return ModelResponse(parts=[call, ToolCallPart("search_guide", {"query": "staff"})])
+
     def abstain_after_limit(messages, info):
-        seen.append(last_search_result(messages))
+        seen.extend(part.content for part in messages[-1].parts if isinstance(part, ToolReturnPart))
         return abstain(messages, info)
 
-    result = ask("Q", store, model=scripted(do_search, do_search, abstain_after_limit))
+    result = ask("Q", store, model=scripted(two_searches, abstain_after_limit))
 
     assert result.stats.searches == 1
-    assert "Search limit reached" in seen[0]
+    assert isinstance(seen[0], list)
+    assert "Search limit reached" in seen[1]
     assert result.answer.abstain_reason == "insufficient_evidence"
 
 
