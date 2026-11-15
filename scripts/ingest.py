@@ -8,7 +8,7 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient
 
-from knowledge_agent.config import QDRANT_URL
+from knowledge_agent.config import settings
 from knowledge_agent.connectors.erasmus_guide import ErasmusGuideConnector
 from knowledge_agent.index.embed import FastEmbedEmbedder
 from knowledge_agent.index.store import ChunkStore
@@ -34,7 +34,7 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
 
     embedder = FastEmbedEmbedder()
-    store = ChunkStore(QdrantClient(url=QDRANT_URL), embedder)
+    store = ChunkStore(QdrantClient(url=settings.qdrant_url), embedder)
     with ErasmusGuideConnector(CACHE_DIR, refresh=args.refresh) as connector:
         report = store.sync(
             connector,
@@ -46,7 +46,7 @@ def main() -> None:
         sys.exit(f"No chunks indexed for {connector.name}")
     tokens = [chunk.token_count for chunk in chunks]
 
-    print(f"Collection {store.collection} at {QDRANT_URL}")
+    print(f"Collection {store.collection} at {settings.qdrant_url}")
     print(f"Documents: {report.documents} fetched, {report.skipped_documents} unchanged")
     print(
         f"Chunks: {len(chunks)} indexed; {report.added} added, "

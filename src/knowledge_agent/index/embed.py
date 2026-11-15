@@ -6,7 +6,7 @@ from typing import Protocol
 from fastembed import TextEmbedding
 from tokenizers import Tokenizer
 
-from knowledge_agent.config import FASTEMBED_CACHE_DIR
+from knowledge_agent.config import settings
 
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
@@ -27,7 +27,7 @@ class Embedder(Protocol):
 class FastEmbedEmbedder:
     """bge-small-en-v1.5 on the CPU through FastEmbed; downloads the model once."""
 
-    def __init__(self, model_name: str = MODEL_NAME, cache_dir: str = FASTEMBED_CACHE_DIR):
+    def __init__(self, model_name: str = MODEL_NAME, cache_dir: str = settings.fastembed_cache_path):
         self.model_name = model_name
         self._model = TextEmbedding(model_name, cache_dir=cache_dir)
         self.dimension = self._model.embedding_size
