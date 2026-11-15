@@ -5,6 +5,8 @@ passages, or states that there is not enough evidence to answer.
 
 ## Why this project
 
+This project builds that retrieval layer as a reusable component, demonstrated on the public Erasmus+ Programme Guide.
+
 ## Status
 
 | Component                                     | State       |
